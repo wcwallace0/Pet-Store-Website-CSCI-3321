@@ -1,4 +1,5 @@
 const db = require("../db_connection.js").db_connection;
+const bcrypt = require("bcryptjs");
 
 // Takes a username and password and confirms they match/exist
 // callback takes parameters: (error, bool success, string statusMessage, bool isAdmin)
@@ -8,7 +9,7 @@ function authenticateUser(username, password, callback) {
         .then(result => {
             if (result.rows.length > 0) {
                 // check pass
-                if (password === result.rows[0].password) {
+                if (bcrypt.compareSync(password, result.rows[0].password)) {
                     // username and password are correct
                     callback(null, true, "Successfully authenticated as " + username + ".", result.rows[0].is_admin);
                 } else {
@@ -82,9 +83,11 @@ function createAccount(username, password, callback) {
     db.query(sql, [username])
         .then(result => {
             if (result.rows.length <= 0) {
+                // Save password hashed
+                let hash = bcrypt.hashSync(password, 10)
                 // create account
                 let sql2 = "INSERT INTO Customer (user_name, password, is_admin) VALUES ($1, $2, false)";
-                db.query(sql2, [username, password])
+                db.query(sql2, [username, hash])
                     .then(result2 => {
                         callback("Account " + username + " successfully created. You may now log in.");
                     });
